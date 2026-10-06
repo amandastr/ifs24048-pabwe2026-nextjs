@@ -45,7 +45,7 @@ export default function LoginPage() {
 
     if (asyncLogin.fulfilled.match(result)) {
       await showSuccessDialog("Berhasil login");
-      router.replace("/dashboard");   // ← INI YANG PENTING
+      router.replace("/dashboard");
     }
   }
 
@@ -62,6 +62,7 @@ export default function LoginPage() {
             Email
           </label>
           <input
+            id="login-email-input"
             type="email"
             value={email.value}
             onChange={email.onChange}
@@ -76,6 +77,7 @@ export default function LoginPage() {
             Password
           </label>
           <input
+            id="login-password-input"
             type="password"
             value={password.value}
             onChange={password.onChange}
@@ -86,6 +88,7 @@ export default function LoginPage() {
         </div>
 
         <button
+          id="login-submit-button"
           type="submit"
           disabled={isLoading}
           className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white font-medium py-2.5 rounded-lg transition"

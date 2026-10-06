@@ -32,7 +32,7 @@ export default function PostDetailPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <p className="text-red-500">{error || "Postingan tidak ditemukan"}</p>
-        <Link href="/dashboard" className="text-teal-600 hover:underline">
+        <Link href="/dashboard" className="text-teal-700 underline">
           Kembali ke Dashboard
         </Link>
       </div>
@@ -44,7 +44,7 @@ export default function PostDetailPage() {
       <header className="bg-white border-b border-slate-200 px-6 py-4">
         <button
           onClick={() => router.back()}
-          className="text-sm text-teal-600 hover:underline"
+          className="text-sm text-teal-700 underline"
         >
           ← Kembali
         </button>
@@ -60,7 +60,7 @@ export default function PostDetailPage() {
               <p className="font-semibold text-slate-800">
                 {post.author?.name || "Pengguna"}
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500">
                 {formatDate(post.created_at)}
               </p>
             </div>
@@ -97,7 +97,7 @@ export default function PostDetailPage() {
                   className="bg-slate-50 rounded-lg p-3 text-sm"
                 >
                   <p className="text-slate-700">{c.comment}</p>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-slate-500 mt-1">
                     {formatDate(c.created_at)}
                   </p>
                 </div>

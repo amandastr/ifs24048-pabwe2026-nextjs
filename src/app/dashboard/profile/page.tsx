@@ -69,7 +69,7 @@ export default function ProfilePage() {
           </Link>
           <button
             onClick={handleLogout}
-            className="px-4 py-2 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition"
+            className="px-4 py-2 text-sm bg-red-50 text-red-700 hover:bg-red-100 rounded-lg transition"
           >
             Logout
           </button>

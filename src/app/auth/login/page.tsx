@@ -91,7 +91,7 @@ export default function LoginPage() {
           id="login-submit-button"
           type="submit"
           disabled={isLoading}
-          className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white font-medium py-2.5 rounded-lg transition"
+          className="w-full bg-teal-700 hover:bg-teal-800 disabled:bg-teal-400 text-white font-medium py-2.5 rounded-lg transition"
         >
           {isLoading ? "Memproses..." : "Login"}
         </button>
@@ -99,7 +99,7 @@ export default function LoginPage() {
 
       <p className="mt-6 text-center text-sm text-slate-500">
         Belum punya akun?{" "}
-        <a href="/auth/register" className="text-teal-600 hover:underline">
+        <a href="/auth/register" className="text-teal-700 underline">
           Daftar
         </a>
       </p>

@@ -1,0 +1,4 @@
+/* Auth layout styles – main styles live in src/app/globals.css */
+.auth-layout {
+  min-height: 100vh;
+}

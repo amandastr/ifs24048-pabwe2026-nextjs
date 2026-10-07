@@ -5,7 +5,7 @@ vi.mock("next/font/google", () => ({
   Plus_Jakarta_Sans: () => ({ variable: "font-test" }),
 }));
 
-vi.mock("./globals.css", () => ({}));
+vi.mock("./globals.css", () => ({}), { virtual: true } as never);
 
 import RootLayout, { metadata } from "./layout";
 

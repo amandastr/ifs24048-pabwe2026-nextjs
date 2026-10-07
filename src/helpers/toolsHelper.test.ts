@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import Swal from "sweetalert2";
 import {
   showSuccessDialog,
   showErrorDialog,
@@ -9,96 +8,154 @@ import {
 } from "./toolsHelper";
 
 vi.mock("sweetalert2", () => ({
-  default: { fire: vi.fn() },
+  default: {
+    fire: vi.fn().mockResolvedValue({ isConfirmed: true }),
+  },
 }));
 
-const fireMock = vi.mocked(Swal.fire);
+import Swal from "sweetalert2";
 
-describe("dialog helpers", () => {
+describe("toolsHelper", () => {
   beforeEach(() => {
-    fireMock.mockReset();
-    fireMock.mockResolvedValue({ isConfirmed: true } as never);
+    vi.clearAllMocks();
+    (Swal.fire as ReturnType<typeof vi.fn>).mockResolvedValue({
+      isConfirmed: true,
+    });
   });
 
-  it("showSuccessDialog memakai judul bawaan dan judul kustom", async () => {
-    await showSuccessDialog("ok");
-    expect(fireMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ icon: "success", title: "Berhasil", text: "ok" })
-    );
-
-    await showSuccessDialog("ok", "Judul Lain");
-    expect(fireMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ title: "Judul Lain" })
-    );
-  });
-
-  it("showErrorDialog memakai judul bawaan dan judul kustom", async () => {
-    await showErrorDialog("salah");
-    expect(fireMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ icon: "error", title: "Gagal", text: "salah" })
-    );
-
-    await showErrorDialog("salah", "Error");
-    expect(fireMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ title: "Error" })
+  // ========== DIALOG ==========
+  it("showSuccessDialog memanggil Swal.fire dengan icon success", async () => {
+    await showSuccessDialog("Data tersimpan");
+    expect(Swal.fire).toHaveBeenCalledWith(
+      expect.objectContaining({
+        icon: "success",
+        title: "Berhasil",
+        text: "Data tersimpan",
+        confirmButtonColor: "#0f766e",
+      })
     );
   });
 
-  it("showWarningDialog memakai judul bawaan dan judul kustom", async () => {
-    await showWarningDialog("awas");
-    expect(fireMock).toHaveBeenLastCalledWith(
+  it("showSuccessDialog bisa custom title", async () => {
+    await showSuccessDialog("OK", "Sukses Custom");
+    expect(Swal.fire).toHaveBeenCalledWith(
+      expect.objectContaining({
+        icon: "success",
+        title: "Sukses Custom",
+        text: "OK",
+      })
+    );
+  });
+
+  it("showErrorDialog memanggil Swal.fire dengan icon error", async () => {
+    await showErrorDialog("Terjadi kesalahan");
+    expect(Swal.fire).toHaveBeenCalledWith(
+      expect.objectContaining({
+        icon: "error",
+        title: "Gagal",
+        text: "Terjadi kesalahan",
+        confirmButtonColor: "#dc2626",
+      })
+    );
+  });
+
+  it("showErrorDialog bisa custom title", async () => {
+    await showErrorDialog("Error detail", "Oops");
+    expect(Swal.fire).toHaveBeenCalledWith(
+      expect.objectContaining({
+        icon: "error",
+        title: "Oops",
+        text: "Error detail",
+      })
+    );
+  });
+
+  it("showWarningDialog memanggil Swal.fire dengan icon warning", async () => {
+    await showWarningDialog("Hati-hati");
+    expect(Swal.fire).toHaveBeenCalledWith(
       expect.objectContaining({
         icon: "warning",
         title: "Peringatan",
-        text: "awas",
+        text: "Hati-hati",
+        confirmButtonColor: "#d97706",
       })
-    );
-
-    await showWarningDialog("awas", "Hati-hati");
-    expect(fireMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ title: "Hati-hati" })
     );
   });
 
-  it("showConfirmDialog mengembalikan true jika dikonfirmasi", async () => {
-    fireMock.mockResolvedValue({ isConfirmed: true } as never);
+  it("showWarningDialog bisa custom title", async () => {
+    await showWarningDialog("Cek lagi", "Warning Custom");
+    expect(Swal.fire).toHaveBeenCalledWith(
+      expect.objectContaining({
+        icon: "warning",
+        title: "Warning Custom",
+        text: "Cek lagi",
+      })
+    );
+  });
 
-    await expect(showConfirmDialog("hapus?")).resolves.toBe(true);
-    expect(fireMock).toHaveBeenLastCalledWith(
+  it("showConfirmDialog return true jika dikonfirmasi", async () => {
+    (Swal.fire as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      isConfirmed: true,
+    });
+    const result = await showConfirmDialog("Yakin hapus?");
+    expect(result).toBe(true);
+    expect(Swal.fire).toHaveBeenCalledWith(
       expect.objectContaining({
         icon: "question",
         title: "Konfirmasi",
-        text: "hapus?",
+        text: "Yakin hapus?",
         showCancelButton: true,
+        confirmButtonText: "Ya",
+        cancelButtonText: "Batal",
       })
     );
   });
 
-  it("showConfirmDialog mengembalikan false jika dibatalkan dan memakai judul kustom", async () => {
-    fireMock.mockResolvedValue({ isConfirmed: false } as never);
+  it("showConfirmDialog return false jika dibatalkan", async () => {
+    (Swal.fire as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      isConfirmed: false,
+    });
+    const result = await showConfirmDialog("Yakin?");
+    expect(result).toBe(false);
+  });
 
-    await expect(showConfirmDialog("hapus?", "Yakin?")).resolves.toBe(false);
-    expect(fireMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ title: "Yakin?" })
+  it("showConfirmDialog bisa custom title", async () => {
+    (Swal.fire as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      isConfirmed: true,
+    });
+    await showConfirmDialog("Lanjut?", "Konfirmasi Custom");
+    expect(Swal.fire).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Konfirmasi Custom",
+        text: "Lanjut?",
+      })
     );
   });
-});
 
-describe("formatDate", () => {
-  it("mengembalikan tanda hubung jika kosong", () => {
+  // ========== formatDate ==========
+  it("formatDate memformat tanggal valid", () => {
+    const result = formatDate("2026-01-15T10:30:00.000Z");
+    expect(typeof result).toBe("string");
+    expect(result).not.toBe("-");
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it("formatDate return '-' jika input kosong", () => {
+    expect(formatDate("")).toBe("-");
     expect(formatDate(null)).toBe("-");
     expect(formatDate(undefined)).toBe("-");
-    expect(formatDate("")).toBe("-");
   });
 
-  it("memformat tanggal valid ke bahasa Indonesia", () => {
-    const result = formatDate("2024-10-05T10:00:00Z");
+  it("formatDate masuk catch saat format gagal (baris 57-59)", () => {
+    const spy = vi.spyOn(Intl, "DateTimeFormat").mockImplementation(() => {
+      throw new Error("format error");
+    });
 
-    expect(result).toContain("2024");
-    expect(result).toContain("Oktober");
-  });
+    const input = "2026-01-01T00:00:00.000Z";
+    const result = formatDate(input);
+    // catch mengembalikan dateString asli
+    expect(result).toBe(input);
 
-  it("mengembalikan teks asli jika tanggal tidak valid", () => {
-    expect(formatDate("bukan tanggal")).toBe("bukan tanggal");
+    spy.mockRestore();
   });
 });

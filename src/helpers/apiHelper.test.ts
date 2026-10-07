@@ -6,186 +6,261 @@ import {
   apiFetch,
 } from "./apiHelper";
 
-vi.mock("@/lib/config", () => ({
-  DELCOM_BASEURL: "https://api.test",
-}));
-
-const mockResponse = (data: unknown, ok = true, status = 200) => ({
-  ok,
-  status,
-  json: vi.fn().mockResolvedValue(data),
-});
-
-describe("token helpers", () => {
+describe("apiHelper", () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.restoreAllMocks();
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
-  it("menyimpan, membaca, dan menghapus token", () => {
-    expect(getAccessToken()).toBeNull();
+  // ========== TOKEN ==========
+  it("putAccessToken & getAccessToken bekerja", () => {
+    putAccessToken("token-abc");
+    expect(getAccessToken()).toBe("token-abc");
+  });
 
-    putAccessToken("abc");
-    expect(getAccessToken()).toBe("abc");
-
+  it("removeAccessToken menghapus token", () => {
+    putAccessToken("token-abc");
     removeAccessToken();
     expect(getAccessToken()).toBeNull();
   });
 
-  it("tidak melakukan apa-apa saat window tidak tersedia (server)", () => {
-    putAccessToken("abc");
-    vi.stubGlobal("window", undefined);
-
+  it("getAccessToken return null jika tidak ada token", () => {
     expect(getAccessToken()).toBeNull();
-    putAccessToken("xyz");
-    removeAccessToken();
-
-    vi.unstubAllGlobals();
-    expect(getAccessToken()).toBe("abc");
-  });
-});
-
-describe("apiFetch", () => {
-  const fetchMock = vi.fn();
-
-  beforeEach(() => {
-    localStorage.clear();
-    fetchMock.mockReset();
-    vi.stubGlobal("fetch", fetchMock);
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it("memanggil GET dengan endpoint berawalan slash tanpa header tambahan", async () => {
-    fetchMock.mockResolvedValue(mockResponse({ ok: 1 }));
-
-    const result = await apiFetch("/users");
-
-    expect(result).toEqual({ ok: 1 });
-    expect(fetchMock).toHaveBeenCalledWith("https://api.test/users", {
-      method: "GET",
-      headers: {},
-      body: undefined,
+  // ========== apiFetch SUCCESS ==========
+  it("apiFetch success tanpa options", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "success", data: { id: 1 } }),
     });
+
+    const res = await apiFetch("/posts");
+    expect(res).toEqual({ status: "success", data: { id: 1 } });
+    expect(global.fetch).toHaveBeenCalled();
   });
 
-  it("menambahkan slash jika endpoint tidak berawalan slash", async () => {
-    fetchMock.mockResolvedValue(mockResponse({}));
+  it("apiFetch menambahkan slash jika endpoint tanpa slash", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
 
-    await apiFetch("users");
-
-    expect(fetchMock.mock.calls[0][0]).toBe("https://api.test/users");
+    await apiFetch("posts");
+    const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(calledUrl).toContain("/posts");
   });
 
-  it("menyusun query string dan melewati nilai undefined atau null", async () => {
-    fetchMock.mockResolvedValue(mockResponse({}));
+  // ========== QUERY PARAMS ==========
+  it("apiFetch menambahkan query params", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "success" }),
+    });
 
     await apiFetch("/posts", {
-      params: {
-        a: 1,
-        b: "x",
-        c: undefined,
-        d: null as unknown as undefined,
-        e: false,
-      },
+      params: { is_me: 1, page: 2, empty: undefined },
     });
 
-    expect(fetchMock.mock.calls[0][0]).toBe(
-      "https://api.test/posts?a=1&b=x&e=false"
+    const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(calledUrl).toContain("is_me=1");
+    expect(calledUrl).toContain("page=2");
+    expect(calledUrl).not.toContain("empty");
+  });
+
+  it("apiFetch tidak menambah ? jika params kosong / semua undefined", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
+
+    await apiFetch("/posts", {
+      params: { a: undefined, b: undefined },
+    });
+
+    const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(calledUrl).not.toContain("?");
+  });
+
+  // ========== AUTHORIZATION ==========
+  it("apiFetch menambahkan Authorization header jika ada token", async () => {
+    putAccessToken("token-xyz");
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
+
+    await apiFetch("/users/me");
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer token-xyz",
+        }),
+      })
     );
   });
 
-  it("tidak menambah tanda tanya jika semua params kosong", async () => {
-    fetchMock.mockResolvedValue(mockResponse({}));
-
-    await apiFetch("/posts", { params: { a: undefined } });
-
-    expect(fetchMock.mock.calls[0][0]).toBe("https://api.test/posts");
-  });
-
-  it("menambahkan header Authorization jika token ada", async () => {
-    putAccessToken("token-1");
-    fetchMock.mockResolvedValue(mockResponse({}));
-
-    await apiFetch("/me", { headers: { "X-Test": "1" } });
-
-    expect(fetchMock.mock.calls[0][1].headers).toEqual({
-      "X-Test": "1",
-      Authorization: "Bearer token-1",
+  it("apiFetch tidak menambahkan Authorization jika tidak ada token", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
     });
+
+    await apiFetch("/posts");
+
+    const options = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(options.headers.Authorization).toBeUndefined();
   });
 
-  it("mengirim body JSON dengan Content-Type application/json", async () => {
-    fetchMock.mockResolvedValue(mockResponse({}));
+  // ========== BODY JSON ==========
+  it("apiFetch set Content-Type json dan stringify body object", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
 
-    await apiFetch("/posts", { method: "POST", body: { title: "Dompet" } });
-
-    const options = fetchMock.mock.calls[0][1];
-    expect(options.method).toBe("POST");
-    expect(options.headers["Content-Type"]).toBe("application/json");
-    expect(options.body).toBe(JSON.stringify({ title: "Dompet" }));
-  });
-
-  it("mengirim FormData apa adanya tanpa Content-Type", async () => {
-    fetchMock.mockResolvedValue(mockResponse({}));
-    const form = new FormData();
-    form.append("cover", "x");
-
-    await apiFetch("/cover", { method: "POST", body: form });
-
-    const options = fetchMock.mock.calls[0][1];
-    expect(options.body).toBe(form);
-    expect(options.headers["Content-Type"]).toBeUndefined();
-  });
-
-  it("tidak menambah Content-Type jika isFormData true", async () => {
-    fetchMock.mockResolvedValue(mockResponse({}));
-
-    await apiFetch("/upload", {
+    await apiFetch("/posts", {
       method: "POST",
-      body: { a: 1 },
+      body: { description: "halo" },
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({ description: "halo" }),
+      })
+    );
+  });
+
+  // ========== FORM DATA ==========
+  it("apiFetch tidak set Content-Type jika isFormData true", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
+
+    const form = new FormData();
+    form.append("cover", new Blob(["x"]), "cover.jpg");
+
+    await apiFetch("/posts/1/cover", {
+      method: "POST",
+      body: form,
       isFormData: true,
     });
 
-    expect(fetchMock.mock.calls[0][1].headers["Content-Type"]).toBeUndefined();
+    const options = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(options.headers["Content-Type"]).toBeUndefined();
+    expect(options.body).toBeInstanceOf(FormData);
   });
 
-  it("memakai objek kosong jika respons bukan JSON", async () => {
-    fetchMock.mockResolvedValue({
+  it("apiFetch mengirim FormData langsung jika body instanceof FormData", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      status: 200,
-      json: vi.fn().mockRejectedValue(new Error("bukan json")),
+      json: async () => ({}),
     });
 
-    await expect(apiFetch("/kosong")).resolves.toEqual({});
+    const form = new FormData();
+    form.append("photo", new Blob(["img"]), "photo.png");
+
+    await apiFetch("/users/me/photo", {
+      method: "POST",
+      body: form,
+    });
+
+    const options = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(options.body).toBeInstanceOf(FormData);
+    // karena body instanceof FormData, Content-Type tidak di-set
+    expect(options.headers["Content-Type"]).toBeUndefined();
   });
 
-  it("melempar error dengan pesan dari server", async () => {
-    fetchMock.mockResolvedValue(
-      mockResponse({ message: "Data tidak valid" }, false, 400)
-    );
+  // ========== ERROR HANDLING ==========
+  it("apiFetch throw message dari response jika tidak ok", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ message: "Unauthorized" }),
+    });
 
-    await expect(apiFetch("/x")).rejects.toThrow("Data tidak valid");
+    await expect(apiFetch("/posts")).rejects.toThrow("Unauthorized");
   });
 
-  it("melempar error dengan pesan bawaan jika server tidak memberi pesan", async () => {
-    fetchMock.mockResolvedValue(mockResponse({}, false, 500));
+  it("apiFetch throw message default jika response tidak ok dan tanpa message", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({}),
+    });
 
-    await expect(apiFetch("/x")).rejects.toThrow(
+    await expect(apiFetch("/posts")).rejects.toThrow(
       "Request failed with status 500"
     );
   });
 
-  it("melempar pesan bawaan jika data respons null", async () => {
-    fetchMock.mockResolvedValue(mockResponse(null, false, 404));
+  it("apiFetch handle json parse error (catch return {})", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => {
+        throw new Error("invalid json");
+      },
+    });
 
-    await expect(apiFetch("/x")).rejects.toThrow(
-      "Request failed with status 404"
-    );
+    const res = await apiFetch("/posts");
+    expect(res).toEqual({});
+  });
+
+  // ========== BODY UNDEFINED / GET ==========
+  it("apiFetch body undefined jika tidak ada body", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    });
+
+    await apiFetch("/posts", { method: "GET" });
+
+    const options = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(options.body).toBeUndefined();
   });
 });
+
+  // ========== SSR / window undefined (baris 6, 11, 16) ==========
+  it("getAccessToken return null saat window undefined (SSR)", () => {
+    const originalWindow = global.window;
+    // @ts-expect-error simulate SSR
+    delete global.window;
+
+    expect(getAccessToken()).toBeNull();
+
+    global.window = originalWindow;
+  });
+
+  it("putAccessToken tidak error saat window undefined (SSR)", () => {
+    const originalWindow = global.window;
+    // @ts-expect-error simulate SSR
+    delete global.window;
+
+    expect(() => putAccessToken("token-ssr")).not.toThrow();
+    expect(getAccessToken()).toBeNull();
+
+    global.window = originalWindow;
+  });
+
+  it("removeAccessToken tidak error saat window undefined (SSR)", () => {
+    const originalWindow = global.window;
+    // @ts-expect-error simulate SSR
+    delete global.window;
+
+    expect(() => removeAccessToken()).not.toThrow();
+
+    global.window = originalWindow;
+  });

@@ -11,6 +11,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
+      include: ["src/**/*.{ts,tsx}"],
       thresholds: {
         lines: 100,
         functions: 100,
@@ -21,7 +22,9 @@ export default defineConfig({
         "node_modules/",
         "src/setupTests.ts",
         "src/test-utils.tsx",
+        "src/types/**",
         "**/*.d.ts",
+        "**/*.test.{ts,tsx}",
         "**/next.config.ts",
         "**/postcss.config.mjs",
         "src/server.ts",

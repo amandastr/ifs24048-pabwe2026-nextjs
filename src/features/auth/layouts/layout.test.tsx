@@ -9,8 +9,8 @@ vi.mock("./globals.css", () => ({}));
 
 import RootLayout, { metadata } from "./layout";
 
-describe("RootLayout", () => {
-  it("membungkus anak dengan html lang id dan Providers", () => {
+describe("RootLayout (features/auth/layouts)", () => {
+  it("membungkus anak dengan html lang id, font, dan Providers", () => {
     const html = renderToStaticMarkup(
       <RootLayout>
         <p>isi halaman</p>
@@ -18,6 +18,7 @@ describe("RootLayout", () => {
     );
 
     expect(html).toContain('lang="id"');
+    expect(html).toContain("font-test");
     expect(html).toContain("isi halaman");
   });
 
